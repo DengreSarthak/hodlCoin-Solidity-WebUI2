@@ -7,23 +7,14 @@ export async function generateStaticParams() {
 
 // @ts-ignore
 export default function VaultPage({
-  params,
+  searchParams,
 }: {
-  params: {
-    vaultId: string[]
-  }
+  searchParams: { id: string; address: string }
 }) {
-  
-  const [prefix, chainId, contractAddress] = params.vaultId
-  
-  if (prefix !== 'v') {
-    return notFound()
-  }
-  console.log(params.vaultId);
   return (
     <InteractionClient
-      initialChainId={chainId}
-      initialAddress={contractAddress}
+      initialChainId={searchParams.id}
+      initialAddress={searchParams.address}
     />
   )
 }
