@@ -16,10 +16,10 @@ export default function VaultPage({
   
   const [prefix, chainId, contractAddress] = params.vaultId
   
-  // if (prefix !== 'v') {
-  //   return notFound()
-  // }
-  console.log(chainId, contractAddress);
+  if (prefix !== 'v') {
+    return notFound()
+  }
+  console.log(params.vaultId);
   return (
     <InteractionClient
       initialChainId={chainId}
