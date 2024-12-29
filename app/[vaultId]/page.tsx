@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation'
 import InteractionClient from './InteractionClient'
 
 export async function generateStaticParams() {
