@@ -34,7 +34,7 @@ export default function CardExplorer({ vault }: { vault: vaultsProps }) {
 
   const handleContinue = () => {
     if (vault.vaultAddress) {
-      router.push(`/v#${chainId}#${vault.vaultAddress}`)
+      router.push(`/v?chainId=${chainId}&vault=${vault.vaultAddress}`)
     }
   }
 
