@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { vaultsProps } from '@/utils/props'
 import CardExplorer from './CardExplorer'
-import { usePublicClient } from 'wagmi'
+import { readContract, getPublicClient } from '@wagmi/core'
+import { config } from '@/utils/config'
 import { HodlCoinVaultFactories } from '@/utils/addresses'
 import { HodlCoinFactoryAbi } from '@/utils/contracts/HodlCoinFactory'
 import { Input } from '../ui/input'
@@ -24,22 +25,18 @@ export default function ExplorerVaults() {
   const [selectedChain, setSelectedChain] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const publicClient = usePublicClient()
 
   const fetchVaultsForChain = async (chainId: number) => {
     try {
-      if (!publicClient) {
-        console.error('No public client available')
-        return []
-      }
-
+      const publicClient = getPublicClient(config, { chainId })
       const factoryAddress = HodlCoinVaultFactories[chainId]
+
       if (!factoryAddress) {
         console.error(`No factory address found for chain ${chainId}`)
         return []
       }
 
-      const totalVaults = (await publicClient.readContract({
+      const totalVaults = (await publicClient?.readContract({
         address: factoryAddress,
         abi: HodlCoinFactoryAbi,
         functionName: 'vaultId',
@@ -48,7 +45,7 @@ export default function ExplorerVaults() {
       const vaultPromises = []
       for (let i = 1; i <= Number(totalVaults); i++) {
         vaultPromises.push(
-          publicClient.readContract({
+          publicClient?.readContract({
             address: factoryAddress,
             abi: HodlCoinFactoryAbi,
             functionName: 'vaults',
@@ -78,6 +75,7 @@ export default function ExplorerVaults() {
       let allVaults: vaultsProps[] = []
 
       if (!selectedChain || selectedChain === 'All chains') {
+        // Fetch vaults from all chains in parallel
         const chainIds = Object.keys(HodlCoinVaultFactories).map(Number)
         const vaultPromises = chainIds.map(chainId =>
           fetchVaultsForChain(chainId),
@@ -85,6 +83,7 @@ export default function ExplorerVaults() {
         const results = await Promise.all(vaultPromises)
         allVaults = results.flat()
       } else {
+        // Fetch vaults for selected chain only
         const chainId = parseInt(selectedChain)
         allVaults = await fetchVaultsForChain(chainId)
       }
@@ -100,7 +99,7 @@ export default function ExplorerVaults() {
 
   useEffect(() => {
     getVaults()
-  }, [selectedChain, publicClient])
+  }, [selectedChain])
 
   const handleSelect = (value: string) => {
     setSelectedChain(value === 'All chains' ? null : value)

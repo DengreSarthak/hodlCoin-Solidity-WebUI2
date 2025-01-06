@@ -7,17 +7,19 @@ import VaultInformation from '@/components/Vault/VaultInformation'
 import { ERC20Abi } from '@/utils/contracts/ERC20'
 import { vaultsProps } from '@/utils/props'
 import { useEffect, useState } from 'react'
-import { useAccount, usePublicClient } from 'wagmi'
+import { useAccount } from 'wagmi'
+import { readContract, getPublicClient } from '@wagmi/core'
+import { config } from '@/utils/config'
 import { HodlCoinAbi } from '@/utils/contracts/HodlCoin'
 import { useSearchParams } from 'next/navigation'
 
 export default function InteractionClient() {
   const searchParams = useSearchParams()
   const account = useAccount()
-  const publicClient = usePublicClient()
 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
   const [chainId, setChainId] = useState<number>(0)
   const [vaultAddress, setVaultAddress] = useState<`0x${string}`>('0x0')
   const [vaultCreator, setVaultCreator] = useState<`0x${string}`>('0x0')
@@ -58,8 +60,8 @@ export default function InteractionClient() {
   }, [searchParams])
 
   const getVaultsData = async () => {
-    if (!vaultAddress || !chainId || !publicClient) {
-      setError('Invalid vault address, chain ID, or client not available')
+    if (!vaultAddress || !chainId) {
+      setError('Invalid vault address or chain ID')
       return
     }
 
@@ -67,6 +69,14 @@ export default function InteractionClient() {
       setIsLoading(true)
       setError(null)
 
+      // Get chain-specific public client
+      const publicClient = getPublicClient(config, { chainId })
+
+      if (!publicClient) {
+        throw new Error(`No public client available for chain ${chainId}`)
+      }
+
+      // Get coin address and vault creator
       const [newCoinAddress, newVaultCreator] = await Promise.all([
         publicClient.readContract({
           abi: HodlCoinAbi,
@@ -80,6 +90,7 @@ export default function InteractionClient() {
         }),
       ])
 
+      // Get token details
       const [name, symbol] = await Promise.all([
         publicClient.readContract({
           abi: ERC20Abi,
@@ -108,16 +119,19 @@ export default function InteractionClient() {
       setCoinSymbol(symbol as string)
     } catch (error) {
       console.error('Error fetching vault data:', error)
-      setError('Failed to fetch vault data')
     } finally {
       setIsLoading(false)
     }
   }
 
   const getFees = async () => {
-    if (!vaultAddress || !chainId || !publicClient) return
+    if (!vaultAddress || !chainId) return
 
     try {
+      const publicClient = getPublicClient(config, { chainId })
+
+      if (!publicClient) return
+
       const [vaultFeeOnChain, vaultCreatorFeeOnChain, stableOrderFeeOnChain] =
         await Promise.all([
           publicClient.readContract({
@@ -148,16 +162,13 @@ export default function InteractionClient() {
   }
 
   const getBalances = async () => {
-    if (
-      !vaultAddress ||
-      !coinAddress ||
-      !account.address ||
-      !chainId ||
-      !publicClient
-    )
-      return
+    if (!vaultAddress || !coinAddress || !account.address || !chainId) return
 
     try {
+      const publicClient = getPublicClient(config, { chainId })
+
+      if (!publicClient) return
+
       const [coinReserveOnChain, coinBalanceOnChain, hodlCoinBalanceOnChain] =
         await Promise.all([
           publicClient.readContract({
@@ -192,9 +203,13 @@ export default function InteractionClient() {
   }
 
   const getReservesPrices = async () => {
-    if (!vaultAddress || !chainId || !publicClient) return
+    if (!vaultAddress || !chainId) return
 
     try {
+      const publicClient = getPublicClient(config, { chainId })
+
+      if (!publicClient) return
+
       const [hodlCoinSupplyOnChain, priceHodlOnChain] = await Promise.all([
         publicClient.readContract({
           abi: ERC20Abi,

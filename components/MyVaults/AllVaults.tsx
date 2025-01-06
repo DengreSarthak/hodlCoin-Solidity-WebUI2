@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { creatorToVaultProps } from '@/utils/props'
 import { useEffect, useState } from 'react'
-import { useAccount, usePublicClient } from 'wagmi'
+import { useAccount } from 'wagmi'
+import { getPublicClient } from '@wagmi/core'
+import { config } from '@/utils/config'
 import { HodlCoinAbi } from '@/utils/contracts/HodlCoin'
 import { HodlCoinFactoryAbi } from '@/utils/contracts/HodlCoinFactory'
 import { HodlCoinVaultFactories } from '@/utils/addresses'
@@ -17,7 +19,6 @@ const VaultDashboard = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const account = useAccount()
-  const publicClient = usePublicClient()
   const router = useRouter()
 
   const fetchVaultsFromAllChains = async () => {
@@ -50,6 +51,10 @@ const VaultDashboard = () => {
     factoryAddress: string,
   ) => {
     try {
+      const publicClient = getPublicClient(config, {
+        chainId: parseInt(chainId),
+      })
+
       if (!publicClient) {
         console.error(`No public client available for chain ${chainId}`)
         return []
@@ -66,6 +71,7 @@ const VaultDashboard = () => {
       // Fetch details for each vault in parallel
       const vaultPromises = vaultAddresses.map(async (vaultAddress, index) => {
         try {
+          // Get vault ID by checking each vault in the factory until we find a match
           let vaultId = 1
           let found = false
 
@@ -75,7 +81,7 @@ const VaultDashboard = () => {
               abi: HodlCoinFactoryAbi,
               functionName: 'vaults',
               args: [vaultId],
-            })) as [string, string, string, string]
+            })) as [string, string, string, string] // [vaultAddress, coinName, coinAddress, coinSymbol]
 
             if (vaultInfo[0].toLowerCase() === vaultAddress.toLowerCase()) {
               found = true
@@ -84,12 +90,14 @@ const VaultDashboard = () => {
             }
           }
 
+          // Get price from vault contract
           const priceHodl = (await publicClient.readContract({
             abi: HodlCoinAbi,
             address: vaultAddress,
             functionName: 'priceHodl',
           })) as bigint
 
+          // Get vault details from factory
           const vaultInfo = (await publicClient.readContract({
             address: factoryAddress as `0x${string}`,
             abi: HodlCoinFactoryAbi,
@@ -97,11 +105,12 @@ const VaultDashboard = () => {
             args: [vaultId],
           })) as [string, string, string, string]
 
+
           return {
             chainId,
-            coinName: vaultInfo[1],
-            coinAddress: vaultInfo[2],
-            coinSymbol: vaultInfo[3],
+            coinName: vaultInfo[1], // Name from factory
+            coinAddress: vaultInfo[2], // Coin address from factory
+            coinSymbol: vaultInfo[3], // Symbol from factory
             vaultAddress: vaultAddress,
             price: Number(Number(priceHodl).toFixed(5)) / 100000,
           }

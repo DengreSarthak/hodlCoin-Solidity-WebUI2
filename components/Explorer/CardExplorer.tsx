@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader } from '../ui/card'
 import { HodlCoinAbi } from '@/utils/contracts/HodlCoin'
 import { vaultsProps } from '@/utils/props'
-import { usePublicClient } from 'wagmi'
+import { config } from '@/utils/config'
+import { readContract, getPublicClient } from '@wagmi/core'
 import { useRouter } from 'next/navigation'
 
 export default function CardExplorer({ vault }: { vault: vaultsProps }) {
@@ -12,14 +13,17 @@ export default function CardExplorer({ vault }: { vault: vaultsProps }) {
   const [loading, setLoading] = useState(true)
   const chainId = vault.chainId
   const router = useRouter()
-  const publicClient = usePublicClient()
 
   const getReservesPrices = useCallback(async () => {
-    if (!vault.vaultAddress || !publicClient) return
+    if (!vault.vaultAddress) return
 
     try {
       setLoading(true)
-      const price = await publicClient.readContract({
+
+      // Get the public client for the specific chain
+      const publicClient = getPublicClient(config, { chainId })
+
+      const price = await publicClient?.readContract({
         address: vault.vaultAddress as `0x${string}`,
         abi: HodlCoinAbi,
         functionName: 'priceHodl',
@@ -32,7 +36,7 @@ export default function CardExplorer({ vault }: { vault: vaultsProps }) {
     } finally {
       setLoading(false)
     }
-  }, [vault.vaultAddress, publicClient])
+  }, [vault.vaultAddress, chainId])
 
   useEffect(() => {
     getReservesPrices()
