@@ -1,18 +1,29 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit'
-import { Chain } from '@rainbow-me/rainbowkit'
-import { scrollSepolia } from 'wagmi/chains'
+import {
+  arbitrum,
+  base,
+  mainnet,
+  optimism,
+  polygon,
+  scrollSepolia,
+  sepolia,
+} from 'wagmi/chains'
+import {
+  getDefaultConfig,
+  RainbowKitProvider,
+  darkTheme,
+  Chain,
+} from '@rainbow-me/rainbowkit'
+import * as chains from 'wagmi/chains'
 import { citreaTestnet } from '@/components/CitreaTestnet'
 
-// export const config = getDefaultConfig({
-//   appName: 'hodlCoin',
-//   projectId: process.env.NEXT_PUBLIC_PROJECT_ID ?? '',
-//   chains: [scrollSepolia, citreaTestnet],
-//   ssr: true,
-// })
+const AllChains: readonly [Chain, ...Chain[]] = [
+  ...(Object.values(chains) as Chain[]),
+  citreaTestnet,
+] as unknown as readonly [Chain, ...Chain[]]
 
 export const config = getDefaultConfig({
   appName: 'hodlCoin',
   projectId: process.env.NEXT_PUBLIC_PROJECT_ID ?? '',
-  chains: [scrollSepolia, citreaTestnet] as Chain[],
+  chains: AllChains,
   ssr: true,
 })
