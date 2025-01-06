@@ -3,7 +3,6 @@
 import React, { ReactNode, useEffect, useState } from 'react'
 import { config } from '@/utils/config'
 import {
-  getDefaultConfig,
   RainbowKitProvider,
   darkTheme,
   Chain,
